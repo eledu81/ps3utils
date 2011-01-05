@@ -69,13 +69,13 @@ int main (int argc, char *argv[])
     printf ("Fixing file : %s\n", block.filename);
     printf ("\tOwner/group: %s(%s):%s(%s)\n", block.owner, block.owner_id, block.group, block.group_id);
 
-    sscanf (block.filesize, "%o", &size);
+    sscanf (block.filesize, "%o", (unsigned int *)&size);
 
     strncpy (block.owner_id, "0001752", 7);
     strncpy (block.group_id, "0001274", 7);
     strncpy (block.owner, "pup_tool", 32);
     strncpy (block.group, "psnes", 32);
-    strncpy (block.ustar, "ustar  ", 7);
+    strncpy (block.ustar, "ustar ", 6);
     block.ustar_version[1] = 0;
     memset (block.device_major, 0, 8);
     memset (block.device_minor, 0, 8);

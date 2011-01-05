@@ -93,7 +93,7 @@ rm $TAR_FILE
 copy_category_tool_xml
 
 log "Recreating dev_flash archive"
-tar -H ustar -cvf $TAR_FILE dev_flash/ >> $LOGFILE 2>&1 || die "Could not create dev_flash tar file"
+tar --format ustar -cvf $TAR_FILE dev_flash/ >> $LOGFILE 2>&1 || die "Could not create dev_flash tar file"
 $FIX_TAR $TAR_FILE >> $LOGFILE 2>&1 || die "Could not fix the tar file"
 
 PKG_FILE=$(basename $(dirname $TAR_FILE) .tar)
@@ -104,7 +104,7 @@ cd $OUTDIR/update_files
 rm -rf dev_flash
 
 log "Creating update files archive"
-tar -H ustar -cvf $OUTDIR/update_files.tar *.pkg *.img dev_flash3_* dev_flash_*  >> $LOGFILE 2>&1 || die "Could not create update files archive"
+tar --format ustar -cvf $OUTDIR/update_files.tar *.pkg *.img dev_flash3_* dev_flash_*  >> $LOGFILE 2>&1 || die "Could not create update files archive"
 $FIX_TAR $OUTDIR/update_files.tar >> $LOGFILE 2>&1 || die "Could not fix update tar file"
 
 VERSION=$(cat $OUTDIR/version.txt)
