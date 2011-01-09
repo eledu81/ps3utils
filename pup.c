@@ -15,8 +15,15 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <limits.h>
-#include <arpa/inet.h>
 #include <string.h>
+
+#ifdef WIN32
+#include <winsock.h>
+#define MKDIR(x,y) mkdir(x)
+#else
+#include <arpa/inet.h>
+#define MKDIR(x,y) mkdir(x,y)
+#endif
 
 #include "sha1.h"
 
@@ -188,14 +195,14 @@ static int read_header (FILE *fd, PUPHeader *header,
 
   read = fread (*files, sizeof(PUPFileEntry), header->file_count, fd);
 
-  if (read < 0 || (uint) read < header->file_count) {
+  if (read < 0 || (uint64_t) read < header->file_count) {
     perror ("Couldn't read file entries");
     goto error;
   }
 
   read = fread (*hashes, sizeof(PUPHashEntry), header->file_count, fd);
 
-  if (read < 0 || (uint) read < header->file_count) {
+  if (read < 0 || (uint64_t) read < header->file_count) {
     perror ("Couldn't read hash entries");
     goto error;
   }
@@ -261,7 +268,7 @@ static void info (const char *file)
 
   print_header_info (&header, &footer);
 
-  for (i = 0; (uint) i < header.file_count; i++)
+  for (i = 0; (uint64_t) i < header.file_count; i++)
     print_file_info (&files[i], &hashes[i]);
 
   fclose (fd);
@@ -309,12 +316,12 @@ static void extract (const char *file, const char *dest)
 
   print_header_info (&header, &footer);
 
-  if (mkdir (dest, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0) {
+  if (MKDIR (dest, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0) {
     perror ("Couldn't create output directory");
     goto error;
   }
 
-  for (i = 0; (uint) i < header.file_count; i++) {
+  for (i = 0; (uint64_t) i < header.file_count; i++) {
     const char *file = NULL;
     unsigned int len;
 
@@ -325,7 +332,11 @@ static void extract (const char *file, const char *dest)
       printf ("*** Unknown entry id, file skipped ****\n\n");
       continue;
     }
-    sprintf (filename, "%s/%s", dest, file);
+
+    if (snprintf (filename, PATH_MAX+1, "%s/%s", dest, file) > PATH_MAX) {
+      fprintf (stderr, "Filename buffer overflow detected\n");
+      goto error;
+    }
 
     printf ("Writing file %s\n", filename);
     out = fopen (filename, "wb");
@@ -342,7 +353,7 @@ static void extract (const char *file, const char *dest)
         len = sizeof(buffer);
       read = fread (buffer, 1, len, fd);
 
-      if (read < 0 || (uint) read < len) {
+      if (read < 0 || (unsigned int) read < len) {
         perror ("Couldn't read all the data");
         goto error;
       }
@@ -350,7 +361,7 @@ static void extract (const char *file, const char *dest)
       HMACUpdate (&context, buffer, len);
 
       written = fwrite (buffer, 1, len, out);
-      if (written < 0 || (uint) written < len) {
+      if (written < 0 || (unsigned int) written < len) {
         perror ("Couldn't write all the data");
         goto error;
       }
@@ -433,7 +444,12 @@ static void create (const char *directory, const char *dest, long build)
     PUPFileEntry *file = NULL;
     PUPHashEntry *hash = NULL;
 
-    sprintf (filename, "%s/%s", directory, entry->filename);
+    if (snprintf (filename, PATH_MAX+1, "%s/%s",
+            directory, entry->filename) > PATH_MAX) {
+      fprintf (stderr, "Filename buffer overflow detected\n");
+      goto error;
+    }
+
 
     fd = fopen (filename, "rb");
     if (fd == NULL) {
@@ -545,7 +561,11 @@ static void create (const char *directory, const char *dest, long build)
       printf ("*** Unknown entry id, file skipped ****\n\n");
       continue;
     }
-    sprintf (filename, "%s/%s", directory, file);
+
+    if (snprintf (filename, PATH_MAX+1, "%s/%s", directory, file) > PATH_MAX) {
+      fprintf (stderr, "Filename buffer overflow detected\n");
+      goto error;
+    }
 
     fd = fopen (filename, "rb");
     if (fd == NULL) {
@@ -560,13 +580,13 @@ static void create (const char *directory, const char *dest, long build)
         len = sizeof(buffer);
       read = fread (buffer, 1, len, fd);
 
-      if (read < 0 || (uint) read < len) {
+      if (read < 0 || (unsigned int) read < len) {
         perror ("Couldn't read all the data");
         goto error;
       }
 
       written = fwrite (buffer, 1, len, out);
-      if (written < 0 || (uint) written < len) {
+      if (written < 0 || (unsigned int) written < len) {
         perror ("Couldn't write all the data");
         goto error;
       }
